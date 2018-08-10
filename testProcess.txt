@@ -1,0 +1,11 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
+
+void main(int argc, char* argv[])
+{
+    // in argv[1] the whole string is passed, with parameters the id, priority, duration that we want to be printed 
+	printf("%s \n",argv[1]);
+   
+}

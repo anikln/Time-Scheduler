@@ -1,0 +1,253 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <unistd.h>
+#include <sys/types.h>
+ 
+typedef enum { FALSE=0, TRUE } Bool;       
+// the struct that is used for the buffer lists: inputProcessList, terminatedProcessList and the struct procDesc
+typedef struct node {                         
+        int id;
+        int priority;
+        int duration;
+        struct node *next;
+} Node;
+ 
+// the following function is used in order to fill the list
+Bool list_create( Node **list,Node **tail,int id, int priority, int duration ) 
+{
+        Node *new = calloc(1, sizeof(Node) );
+        if ( !new )
+                return FALSE;
+ 
+        new->id = id;
+        new->priority = priority;
+        new->duration = duration;
+        new->next = NULL;
+	if ( !*list )
+	{
+		*list=*tail=new;
+		return TRUE;
+	}
+        (*tail)->next = new;
+ 	(*tail)=new;
+
+        return TRUE;
+}
+
+// the following function swaps the nodes a, b that are used in bubblesort
+void swap(Node *a, Node *b)
+{
+	int temp = a->duration;
+	a->duration = b->duration;
+	b->duration = temp;
+}
+
+// function Bubble sort that sorts the list
+void bubbleSort(Node *start)
+{
+	int swapped, i;
+	Node *ptr1;
+	Node *lptr = NULL;
+ 
+    // checks if the lsit is empty
+	if (ptr1 == NULL)
+		return;
+ 
+	do
+	{
+		swapped = 0;
+        	ptr1 = start;
+        	while (ptr1->next != lptr)
+        	{
+            // sorted by duration time
+			if (ptr1->duration > ptr1->next->duration) 
+			{ 
+		                swap(ptr1, ptr1->next);
+		                swapped = 1;
+			}
+        		ptr1 = ptr1->next;
+        	}
+        	lptr = ptr1;
+    	}
+    	while (swapped);
+}
+ 
+// the following function is used in order to notify as about the length of the list 
+int list_len( Node *list )
+{
+	register int i = 0;
+        for (i=0; list; i++) 
+                list = list->next;
+ 
+        return i;
+}
+ 
+
+// the following function prints the list
+void list_print( Node *list )
+{
+        while ( list )
+	{
+                printf("%d ", list->duration);
+                list = list->next;
+        }
+        putchar('\n');
+ 
+        return;
+}
+ 
+// the following function destroyes the list and free up the memory after an error produced from calloc
+void list_destroy( Node *list )
+{
+        // if the list is empty then the original is returned
+        if ( !list )        
+                return;
+ 
+        Node *dummy = NULL;
+        while ( list ) 
+	{    
+                dummy = list->next;
+                free( list );
+                list = dummy;
+        }
+ 
+        return;
+}
+
+
+// code used for the NonInteractiveProcessAdministrator-NIPA
+Node *Nipa(Node *list,Node *tail)
+{
+	int x,number_process=0,y,firstnodeoflist,id,priority,duration,i;
+    	srand(time(NULL));
+
+	while(number_process<=50)
+	{		
+		x= rand() % 10+1;
+        // sleeps for some seconds
+		sleep(x); 
+        // create the random processes
+		y= rand() % 10+1;
+		firstnodeoflist=0;
+		for(i=0;i<y;i++)
+		{
+			id=number_process;
+            // priority must be between 1 and 5
+			priority= rand()% 5+1;
+			duration= rand()% 30+5;
+			number_process=number_process+1;
+			
+			if(firstnodeoflist==0)
+			{  
+				firstnodeoflist=1;  
+                // in case that calloc that is inside the function list_create fails the whole program will be destroyed and the buffer will be freed up.
+				if ( list_create( &list,&tail,id,priority,duration ) == FALSE)
+				{               
+	               		printf("out of memory, aborting program");
+	               		exit( EXIT_FAILURE );
+	        		}
+			}
+			else if ( list_create( &list,&tail,id,priority,duration) ==FALSE )
+			{                
+	                	printf("out of memory, aborting program");
+	                	list_destroy(list);                        
+	                	exit( EXIT_FAILURE );
+	        	}		
+		}
+	}
+	return list;
+}
+
+// the time scheduler returns a list so the data type of the timescheduler function must node
+Node *timescheduler( Node *list)
+{
+	int i,firstnodeoflist=0;
+    // head of the inputProcessList
+	Node *inputProcessList = NULL; 
+	Node *inputProcessListtail=NULL;
+    // head of the terminatedProcessList
+	Node *terminatedProcessList = NULL;
+	Node *terminatedProcessListtail=NULL;
+        // the string value str is used in sprintf
+    	char str[100];
+    	pid_t pid;	    
+
+	// the pointer dummy is used in order to pass the elements in inputProcessList 
+	Node *dummy = NULL;
+	dummy=list;
+
+	firstnodeoflist=0;
+	for(i=0;i<list_len(list);i++)
+	{
+		if(firstnodeoflist==0){  
+			firstnodeoflist=1;                       
+			if ( list_create( &inputProcessList,&inputProcessListtail,dummy->id,dummy->priority,dummy->duration ) == FALSE) 
+			{             
+                        // in case that calloc fails the whole program will be destoryed and the buffer will be freed up
+                		printf("out of memory, aborting program");
+                		exit( EXIT_FAILURE );
+        		}
+		}
+		else if ( list_create(  &inputProcessList,&inputProcessListtail,dummy->id,dummy->priority,dummy->duration ) ==FALSE )
+		{                
+                	printf("out of memory, aborting program");
+                	list_destroy(inputProcessList);                        
+                	exit( EXIT_FAILURE );
+		}
+		dummy=dummy->next;			
+	}
+    // sorting so the first element of inputProcessList will be the one with the lowest duration 
+	bubbleSort(inputProcessList);
+	printf("Check if inputProcessList is sorted and contains the right elements:\n");
+	printf("The buffer consists of %d nodes and it contains the elements:\n", list_len( list) );
+        list_print( list );
+	printf("The inputProcessList consists of %d nodes and it contains the elements:\n", list_len( inputProcessList) );
+        list_print( inputProcessList );
+
+	while(inputProcessList)
+	{
+		pid = fork();
+		if (pid<0)
+		{
+			printf("fork failed with error code=%d\n",pid);
+			exit(0);
+		}	
+		else if ( pid == 0 ) 
+		{
+			sprintf(str,"Hello World. Process %d, duration %d, priority %d.\n",inputProcessList->id,inputProcessList->priority,inputProcessList->duration);
+			execl("/home/welcome/Downloads/test","test",str,(char *)0);
+		}
+		else 
+		{
+			list_create( &terminatedProcessList,&terminatedProcessListtail,inputProcessList->id,inputProcessList->priority,inputProcessList->duration);
+			inputProcessList= inputProcessList->next;
+		}
+		
+		double r = (int) (double)rand() / ((double) RAND_MAX);
+		for(i=1;i<r*10000000;i++);
+	}
+		return terminatedProcessList;
+}
+ 
+// ------------------------------------------------------------------- 
+
+int main ( void )
+{
+    // head of buffer list
+	Node *buffer = NULL;              
+    // tail of the buffer list so it is of FIFO type
+	Node *buffertail=NULL;	          	
+    // head of the terminatedProcessList
+	Node *terminatedProcessList=NULL;
+	
+	
+	buffer=Nipa(buffer,buffertail);
+	terminatedProcessList=timescheduler(buffer);
+	printf("Check if the lists returned from NIPA and SJFScheduler are correct:\n");
+	printf("The buffer consists of %d nodes and it contains the elements:\n", list_len( buffer ) );
+        list_print( buffer );
+	printf("The terminatedProcessList consists of %d nodes and it contains the elements:\n", list_len( terminatedProcessList) );
+        list_print( terminatedProcessList );	
+
+}
