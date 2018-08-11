@@ -50,7 +50,9 @@ where the r variable is and integer, rand() is the random number generator and R
 
 The creation of a testProcess process that corresponds to the process descriptor, isdone throught the system calls fork() and execve().
 
+## Results after the program is executed
 
+<img src="/images/1.png"><img src="/images/2.png"><img src="/images/3.png"><img src="/images/4.png">
 ## Authors
 
 * **Kleinaki Athina Styliani** -  [AniKln](https://github.com/anikln)
